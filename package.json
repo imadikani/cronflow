@@ -1,20 +1,32 @@
 {
-  "name": "cronflow-tmp",
+  "name": "cronflow",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:push": "prisma db push --accept-data-loss",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "@prisma/client": "^6.19.2",
+    "axios": "^1.13.6",
     "next": "16.1.6",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.2",
+    "p-limit": "^7.3.0",
+    "prisma": "^6.19.2",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",

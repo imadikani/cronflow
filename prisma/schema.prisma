@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model JobRun {
+  id          String    @id @default(cuid())
+  jobName     String
+  status      String    // SUCCESS | FAILURE | RUNNING
+  triggeredBy String    // CRON | MANUAL
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  duration    Int?      // ms
+  output      String?   @db.Text
+  error       String?   @db.Text
+  attempt     Int       @default(1)
+}
+
+model JobState {
+  jobName      String    @id
+  enabled      Boolean   @default(true)
+  lastRunAt    DateTime?
+  lastStatus   String?
+  nextRunAt    DateTime?
+  runCount     Int       @default(0)
+  failureCount Int       @default(0)
+  updatedAt    DateTime  @updatedAt
+}

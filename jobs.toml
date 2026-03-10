@@ -1,0 +1,19 @@
+[jobs.example-ping]
+description = "Example ping to httpbin"
+schedule = "every hour"
+webhook = "https://httpbin.org/post"
+timezone = "Africa/Casablanca"
+enabled = true
+retry = 1
+timeout = 10
+notify_on_failure = []
+
+[jobs.example-daily]
+description = "Example daily job"
+schedule = "every day at 09:00"
+webhook = "https://httpbin.org/post"
+timezone = "Africa/Casablanca"
+enabled = true
+retry = 2
+timeout = 30
+notify_on_failure = []
