@@ -19,3 +19,13 @@ enabled = true
 retry = 2
 timeout = 30
 notify_on_failure = []
+
+[jobs.test-local]
+description = "Test job hitting local Python server — fires every minute"
+schedule = "every 1 minutes"
+webhook = "http://localhost:4444"
+timezone = "Africa/Casablanca"
+enabled = true
+retry = 0
+timeout = 15
+notify_on_failure = []
