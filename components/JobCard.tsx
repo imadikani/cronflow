@@ -62,7 +62,7 @@ export default function JobCard({ job, onRefresh }: { job: JobData; apiKey?: str
           </Link>
           <p className="text-[#8b7db5] text-xs mt-0.5 leading-relaxed">{job.description}</p>
         </div>
-        <StatusBadge status={job.lastStatus} runCount={job.runCount} nextRunAt={job.nextRunAt} />
+        <StatusBadge status={job.lastStatus} runCount={job.runCount} nextRunAt={job.nextRunAt} isRunning={job.isRunning} />
       </div>
 
       <div className="text-xs text-[#8b7db5] space-y-1">

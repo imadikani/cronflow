@@ -4,6 +4,7 @@ interface StatusBadgeProps {
   status: string | null
   runCount?: number
   nextRunAt?: string | null
+  isRunning?: boolean
 }
 
 const styles: Record<string, string> = {
@@ -18,12 +19,12 @@ const styles: Record<string, string> = {
 export function resolveStatus(
   lastStatus: string | null,
   runCount: number,
-  nextRunAt: string | null
+  nextRunAt: string | null,
+  isRunning: boolean
 ): string {
-  if (lastStatus === 'RUNNING') return 'RUNNING'
+  if (isRunning || lastStatus === 'RUNNING') return 'RUNNING'
 
   if (runCount === 0 && !lastStatus) {
-    // Check if nextRunAt is more than 10 minutes in the past
     if (nextRunAt) {
       const next = new Date(nextRunAt).getTime()
       const tenMinAgo = Date.now() - 10 * 60 * 1000
@@ -38,8 +39,8 @@ export function resolveStatus(
   return 'NEW'
 }
 
-export default function StatusBadge({ status, runCount = 0, nextRunAt = null }: StatusBadgeProps) {
-  const s = resolveStatus(status, runCount, nextRunAt)
+export default function StatusBadge({ status, runCount = 0, nextRunAt = null, isRunning = false }: StatusBadgeProps) {
+  const s = resolveStatus(status, runCount, nextRunAt, isRunning)
   const cls = styles[s] ?? styles.NEW
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>

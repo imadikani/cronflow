@@ -113,6 +113,7 @@ export default function JobsPage() {
                         status={job.lastStatus}
                         runCount={job.runCount}
                         nextRunAt={job.nextRunAt}
+                        isRunning={job.isRunning}
                       />
                     </td>
                     <td className="px-5 py-4 text-[#e8e0ff]">{job.runCount}</td>
