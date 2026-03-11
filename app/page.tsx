@@ -14,6 +14,7 @@ interface JobData {
   nextRunAt: string | null
   runCount: number
   failureCount: number
+  isRunning: boolean
 }
 
 function MoroccoTime() {
@@ -56,7 +57,7 @@ export default function Dashboard() {
     return () => clearInterval(id)
   }, [fetchJobs])
 
-  const runningNow = jobs.filter(j => j.lastStatus === 'RUNNING').length
+  const runningNow = jobs.filter(j => j.isRunning).length
   const failedToday = jobs.filter(j => {
     if (j.lastStatus !== 'FAILURE' || !j.lastRunAt) return false
     const d = new Date(j.lastRunAt)

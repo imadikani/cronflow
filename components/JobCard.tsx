@@ -14,6 +14,7 @@ interface JobData {
   nextRunAt: string | null
   runCount: number
   failureCount: number
+  isRunning: boolean
 }
 
 function relativeTime(dateStr: string | null): string {
@@ -36,20 +37,19 @@ function formatTime(dateStr: string | null): string {
   })
 }
 
-export default function JobCard({ job, apiKey, onRefresh }: { job: JobData; apiKey: string; onRefresh: () => void }) {
-  const [triggering, setTriggering] = useState(false)
+export default function JobCard({ job, onRefresh }: { job: JobData; apiKey?: string; onRefresh: () => void }) {
+  const [busy, setBusy] = useState(false)
 
-  async function handleTrigger(e: React.MouseEvent) {
+  async function handleAction(e: React.MouseEvent) {
     e.preventDefault()
-    setTriggering(true)
+    setBusy(true)
+    const action = job.isRunning ? 'stop' : 'start'
     try {
-      await fetch(`/api/jobs/${job.name}/trigger`, {
-        method: 'POST',
-        headers: { 'x-api-key': apiKey },
-      })
-      setTimeout(onRefresh, 1000)
+      await fetch(`/api/jobs/${job.name}/${action}`, { method: 'POST' })
+      await onRefresh()
+      setTimeout(onRefresh, 2000)
     } finally {
-      setTriggering(false)
+      setBusy(false)
     }
   }
 
@@ -85,11 +85,15 @@ export default function JobCard({ job, apiKey, onRefresh }: { job: JobData; apiK
       </div>
 
       <button
-        onClick={handleTrigger}
-        disabled={triggering}
-        className="mt-1 w-full py-1.5 rounded-md bg-[#7c5cbf]/20 text-[#c4b5f4] text-xs font-medium hover:bg-[#7c5cbf]/40 transition-colors disabled:opacity-50 border border-[#7c5cbf]/30"
+        onClick={handleAction}
+        disabled={busy}
+        className={`mt-1 w-full py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 border ${
+          job.isRunning
+            ? 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
+            : 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'
+        }`}
       >
-        {triggering ? 'Triggering...' : 'Run now'}
+        {busy ? '...' : job.isRunning ? '⏹ Stop' : '▶ Start'}
       </button>
     </div>
   )

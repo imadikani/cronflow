@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import { loadJobs, type JobConfig } from './parser'
-import { runJob } from './executor'
+import { runJob, cancelJob as cancelRunningJob, isJobRunning as checkJobRunning, getRunningJobs } from './executor'
 import { prisma } from './prisma'
 
 let _limit: ((fn: () => Promise<unknown>) => Promise<unknown>) | null = null
@@ -14,7 +14,7 @@ async function getLimit() {
   return _limit
 }
 
-const runningJobs = new Set<string>()
+const activeJobs = new Set<string>()
 const tasks = new Map<string, ReturnType<typeof cron.schedule>>()
 let schedulerRunning = false
 
@@ -23,7 +23,6 @@ function nextRunDate(): Date {
 }
 
 function registerJob(job: JobConfig) {
-  // Remove existing task if any
   const existing = tasks.get(job.name)
   if (existing) {
     existing.stop()
@@ -33,16 +32,16 @@ function registerJob(job: JobConfig) {
   const task = cron.schedule(
     job.cronExpression,
     async () => {
-      if (runningJobs.has(job.name)) {
+      if (activeJobs.has(job.name)) {
         console.log(`[cronflow] Skipping ${job.name} — already running`)
         return
       }
-      runningJobs.add(job.name)
+      activeJobs.add(job.name)
       try {
         const limit = await getLimit()
         await limit(() => runJob(job, 'CRON'))
       } finally {
-        runningJobs.delete(job.name)
+        activeJobs.delete(job.name)
       }
     },
     { timezone: job.timezone }
@@ -91,36 +90,52 @@ export async function startScheduler() {
   }
 }
 
-export async function enableJob(jobName: string) {
+// Start button: trigger the job immediately
+export async function startJob(jobName: string) {
   const jobs = loadJobs()
   const job = jobs.find(j => j.name === jobName)
   if (!job) throw new Error(`Job not found: ${jobName}`)
 
+  // Re-enable cron schedule
   registerJob(job)
 
+  // Mark enabled in DB
   await prisma.jobState.upsert({
     where: { jobName },
     create: { jobName, enabled: true, nextRunAt: nextRunDate() },
     update: { enabled: true, nextRunAt: nextRunDate() },
   })
 
-  return { jobName, enabled: true }
+  // Fire the job immediately in the background
+  activeJobs.add(job.name)
+  runJob(job, 'MANUAL')
+    .finally(() => activeJobs.delete(job.name))
+    .catch(err => console.error(`[cronflow] Manual run of ${jobName} failed:`, err))
+
+  return { jobName, enabled: true, running: true }
 }
 
-export async function disableJob(jobName: string) {
+// Stop button: cancel running execution + disable cron
+export async function stopJob(jobName: string) {
   const jobs = loadJobs()
   const job = jobs.find(j => j.name === jobName)
   if (!job) throw new Error(`Job not found: ${jobName}`)
 
+  // Cancel the in-flight execution if any
+  const wasCancelled = cancelRunningJob(jobName)
+  activeJobs.delete(jobName)
+
+  // Remove from cron schedule
   unregisterJob(jobName)
 
+  // Mark disabled in DB
   await prisma.jobState.upsert({
     where: { jobName },
     create: { jobName, enabled: false },
     update: { enabled: false, nextRunAt: null },
   })
 
-  return { jobName, enabled: false }
+  return { jobName, enabled: false, running: false, wasCancelled }
 }
 
 export async function triggerJob(jobName: string) {
@@ -128,6 +143,14 @@ export async function triggerJob(jobName: string) {
   const job = jobs.find(j => j.name === jobName)
   if (!job) throw new Error(`Job not found: ${jobName}`)
   return runJob(job, 'MANUAL')
+}
+
+export function isJobRunning(jobName: string): boolean {
+  return checkJobRunning(jobName)
+}
+
+export function getAllRunningJobs(): string[] {
+  return getRunningJobs()
 }
 
 export function isSchedulerRunning() {

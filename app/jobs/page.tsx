@@ -19,6 +19,7 @@ interface JobData {
   nextRunAt: string | null
   runCount: number
   failureCount: number
+  isRunning: boolean
 }
 
 function ScheduleDisplay({ job }: { job: JobData }) {
@@ -69,7 +70,9 @@ export default function JobsPage() {
     setActionLoading(prev => ({ ...prev, [jobName]: true }))
     try {
       await fetch(`/api/jobs/${jobName}/${action}`, { method: 'POST' })
-      setTimeout(fetchJobs, 500)
+      // Poll faster after action to reflect state change
+      await fetchJobs()
+      setTimeout(fetchJobs, 2000)
     } finally {
       setActionLoading(prev => ({ ...prev, [jobName]: false }))
     }
@@ -121,21 +124,21 @@ export default function JobsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        {!job.enabled ? (
-                          <button
-                            onClick={() => handleAction(job.name, 'start')}
-                            disabled={busy}
-                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                          >
-                            ▶ Start
-                          </button>
-                        ) : (
+                        {job.isRunning ? (
                           <button
                             onClick={() => handleAction(job.name, 'stop')}
                             disabled={busy}
                             className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
                           >
-                            ⏹ Stop
+                            {busy ? '...' : '⏹ Stop'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleAction(job.name, 'start')}
+                            disabled={busy}
+                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                          >
+                            {busy ? '...' : '▶ Start'}
                           </button>
                         )}
                         <button

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { disableJob } from '@/lib/scheduler'
+import { stopJob } from '@/lib/scheduler'
 
 export async function POST(
   _req: NextRequest,
@@ -10,7 +10,7 @@ export async function POST(
   const { name } = await params
 
   try {
-    const result = await disableJob(name)
+    const result = await stopJob(name)
     return NextResponse.json(result)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
