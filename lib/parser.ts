@@ -15,6 +15,8 @@ export interface JobConfig {
   timeout: number
   notifyOnFailure: string[]
   headers?: Record<string, string>
+  startTime?: string
+  stopTime?: string
 }
 
 interface RawJob {
@@ -27,6 +29,8 @@ interface RawJob {
   timeout?: number
   notify_on_failure?: string[]
   headers?: Record<string, string>
+  start_time?: string
+  stop_time?: string
 }
 
 interface TomlConfig {
@@ -54,6 +58,8 @@ export function loadJobs(): JobConfig[] {
       timeout: job.timeout ?? 30,
       notifyOnFailure: job.notify_on_failure ?? [],
       headers: job.headers,
+      startTime: job.start_time,
+      stopTime: job.stop_time,
     }
   })
 }

@@ -110,7 +110,7 @@ export default function JobDetailPage() {
           { label: 'Timezone', value: job.timezone },
           { label: 'Webhook', value: job.webhook },
           { label: 'Retry', value: String(job.cronExpression) },
-          { label: 'Status', value: job.lastStatus ?? 'PENDING' },
+          { label: 'Status', value: job.lastStatus ?? 'NEW' },
           { label: 'Total Runs', value: String(job.runCount) },
           { label: 'Failures', value: String(job.failureCount) },
         ].map(row => (

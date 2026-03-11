@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { loadJobs } from './parser'
+import { loadJobs, type JobConfig } from './parser'
 import { runJob } from './executor'
 import { prisma } from './prisma'
 
@@ -13,16 +13,52 @@ async function getLimit() {
   }
   return _limit
 }
+
 const runningJobs = new Set<string>()
 const tasks = new Map<string, ReturnType<typeof cron.schedule>>()
 let schedulerRunning = false
 
-function nextRunDate(cronExpr: string, timezone: string): Date {
-  // Approximate next run: parse cron and add to now
-  // Using node-cron's internal logic isn't exposed, so we compute roughly
-  const now = new Date()
-  // For simplicity, add 1 minute and let node-cron handle it natively
-  return new Date(now.getTime() + 60_000)
+function nextRunDate(): Date {
+  return new Date(Date.now() + 60_000)
+}
+
+function registerJob(job: JobConfig) {
+  // Remove existing task if any
+  const existing = tasks.get(job.name)
+  if (existing) {
+    existing.stop()
+    tasks.delete(job.name)
+  }
+
+  const task = cron.schedule(
+    job.cronExpression,
+    async () => {
+      if (runningJobs.has(job.name)) {
+        console.log(`[cronflow] Skipping ${job.name} — already running`)
+        return
+      }
+      runningJobs.add(job.name)
+      try {
+        const limit = await getLimit()
+        await limit(() => runJob(job, 'CRON'))
+      } finally {
+        runningJobs.delete(job.name)
+      }
+    },
+    { timezone: job.timezone }
+  )
+
+  tasks.set(job.name, task)
+  console.log(`[cronflow] Scheduled "${job.name}" — ${job.cronExpression} (${job.timezone})`)
+}
+
+function unregisterJob(jobName: string) {
+  const existing = tasks.get(jobName)
+  if (existing) {
+    existing.stop()
+    tasks.delete(jobName)
+    console.log(`[cronflow] Unregistered "${jobName}"`)
+  }
 }
 
 export async function startScheduler() {
@@ -35,45 +71,56 @@ export async function startScheduler() {
   for (const job of jobs) {
     if (!job.enabled) continue
 
-    const task = cron.schedule(
-      job.cronExpression,
-      async () => {
-        if (runningJobs.has(job.name)) {
-          console.log(`[cronflow] Skipping ${job.name} — already running`)
-          return
-        }
-        runningJobs.add(job.name)
-        try {
-          const limit = await getLimit()
-          await limit(() => runJob(job, 'CRON'))
-        } finally {
-          runningJobs.delete(job.name)
-        }
-      },
-      { timezone: job.timezone }
-    )
+    registerJob(job)
 
-    tasks.set(job.name, task)
-
-    // Update nextRunAt in DB
     try {
       await prisma.jobState.upsert({
         where: { jobName: job.name },
         create: {
           jobName: job.name,
           enabled: job.enabled,
-          nextRunAt: nextRunDate(job.cronExpression, job.timezone),
+          nextRunAt: nextRunDate(),
         },
         update: {
-          nextRunAt: nextRunDate(job.cronExpression, job.timezone),
+          nextRunAt: nextRunDate(),
         },
       })
     } catch {
-      // DB might not be available at startup; skip
+      // DB might not be available at startup
     }
-
-    console.log(`[cronflow] Scheduled "${job.name}" — ${job.cronExpression} (${job.timezone})`)
   }
+}
+
+export async function enableJob(jobName: string) {
+  const jobs = loadJobs()
+  const job = jobs.find(j => j.name === jobName)
+  if (!job) throw new Error(`Job not found: ${jobName}`)
+
+  registerJob(job)
+
+  await prisma.jobState.upsert({
+    where: { jobName },
+    create: { jobName, enabled: true, nextRunAt: nextRunDate() },
+    update: { enabled: true, nextRunAt: nextRunDate() },
+  })
+
+  return { jobName, enabled: true }
+}
+
+export async function disableJob(jobName: string) {
+  const jobs = loadJobs()
+  const job = jobs.find(j => j.name === jobName)
+  if (!job) throw new Error(`Job not found: ${jobName}`)
+
+  unregisterJob(jobName)
+
+  await prisma.jobState.upsert({
+    where: { jobName },
+    create: { jobName, enabled: false },
+    update: { enabled: false, nextRunAt: null },
+  })
+
+  return { jobName, enabled: false }
 }
 
 export async function triggerJob(jobName: string) {

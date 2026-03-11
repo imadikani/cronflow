@@ -6,6 +6,8 @@ timezone = "Africa/Casablanca"
 enabled = true
 retry = 1
 timeout = 10
+start_time = "08:00"
+stop_time = "22:00"
 notify_on_failure = []
 
 [jobs.example-daily]

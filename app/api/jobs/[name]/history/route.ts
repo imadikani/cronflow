@@ -12,7 +12,7 @@ export async function GET(
   const runs = await prisma.jobRun.findMany({
     where: { jobName: name },
     orderBy: { startedAt: 'desc' },
-    take: 50,
+    take: 100,
   })
 
   return NextResponse.json(runs)
