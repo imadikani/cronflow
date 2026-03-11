@@ -1,9 +1,6 @@
 [build]
 builder = "nixpacks"
 
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["nodejs_20"]
-
 [deploy]
 startCommand = "npx prisma db push && npm start"
 restartPolicyType = "on_failure"
