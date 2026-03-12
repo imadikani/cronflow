@@ -33,7 +33,7 @@ notify_on_failure = []
 
 [jobs.monthly-fee-reminder]
 description = "Send monthly maintenance fee reminder to residents"
-schedule = "every day at 09:00"
+schedule = "every 30 days"
 webhook = "http://localhost:4444"
 timezone = "Africa/Casablanca"
 enabled = true
