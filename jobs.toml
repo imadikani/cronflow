@@ -41,13 +41,3 @@ retry = 0
 timeout = 15
 notify_on_failure = []
 
-[jobs.monthly-fee-reminder]
-description = "Send monthly maintenance fee reminder to residents"
-schedule = "every month on day 1 at 09:00"
-webhook = "https://httpbin.org/post"
-timezone = "Africa/Casablanca"
-enabled = true
-retry = 3
-timeout = 30
-notify_on_failure = []
-
